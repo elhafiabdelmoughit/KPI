@@ -276,7 +276,7 @@ def page_basic(ref_irr, ref_temp, gamma, _dc_cap_unused, e_pot_mode=None, pr_tar
     # ------------------------------------------------------------------
     # Details (per 10-min) — application numérique in ONE line per KPI
     # ------------------------------------------------------------------
-    with st.expander("Détails de calcul (application numérique) — par pas de 10 min", expanded=False):
+    with st.expander("Détails de calcul ", expanded=False):
 
         # Which interval?
         times = edited.get("Time", pd.Series([f"Row {i}" for i in range(len(edited))])).tolist()
@@ -338,7 +338,7 @@ def page_basic(ref_irr, ref_temp, gamma, _dc_cap_unused, e_pot_mode=None, pr_tar
         accap6  = _r(details["AC_cap_kWh_per_10min"], 3)
         epot_n  = _r(details["E_potential_kWh"], 6)
 
-        st.markdown("**Application numérique — relation complète (une ligne)**")
+        st.markdown("**Application numérique**")
 
         # 1) Reference Yield (h)
         render_latex_template(
@@ -424,7 +424,7 @@ def page_basic(ref_irr, ref_temp, gamma, _dc_cap_unused, e_pot_mode=None, pr_tar
     # ------------------------------------------------------------------
     # Aggregated details — sums shown as "a + b + c = total"
     # ------------------------------------------------------------------
-    with st.expander("Détails de calcul (application numérique) — agrégés (jour)", expanded=False):
+    with st.expander("Détails de calcul ", expanded=False):
 
         def _fmt(x, n=6):
             try:

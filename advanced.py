@@ -330,7 +330,7 @@ The program automatically:
 
 
 def page_advanced():
-    st.title("ADVANCED ")
+    st.title("ADVANCED — Site (Standalone, Two Global Events)")
     _about()
 
     # ----- Inputs (per 10-min) -----
@@ -343,15 +343,24 @@ def page_advanced():
         use_container_width=True,
         num_rows="dynamic",
         column_config={
-            "Time": st.column_config.TextColumn("Time (hh:mm)", help="10-min window timestamp."),
-            "Potential_kWh": st.column_config.NumberColumn("Potential production (kWh)", help="Potential energy per 10-min."),
-            "AC_kWh_Site": st.column_config.NumberColumn("AC energy (kWh)", help="Measured AC energy per 10-min."),
+            "Time": st.column_config.TextColumn(
+                "Time (hh:mm)",
+                help="Start timestamp of the 10-min interval (hh:mm)."
+            ),
+            "Potential_kWh": st.column_config.NumberColumn(
+                "Potential production (kWh)",
+                help="Estimated site potential production during the interval, derived from irradiance & temperature."
+            ),
+            "AC_kWh_Site": st.column_config.NumberColumn(
+                "AC energy (kWh)",
+                help="Measured AC energy exported to the grid during the interval."
+            ),
         },
     )
     st.session_state["adv_inputs_site"] = inputs_df.copy()
 
     # ----- Events (two global events) -----
-    st.markdown("### Events ")
+    st.markdown("### Events — Global IEC-coded events (editable)")
     if "adv_events_global2" not in st.session_state:
         st.session_state["adv_events_global2"] = _default_global_two_events()
     events2_df = st.data_editor(
@@ -360,12 +369,31 @@ def page_advanced():
         use_container_width=True,
         num_rows=2,
         column_config={
-            "EventID": st.column_config.TextColumn("EventID"),
-            "Inv": st.column_config.SelectboxColumn("Inverter", options=INV_CHOICES, required=False),
-            "IEC": st.column_config.TextColumn("IEC code", help="e.g., 00101, 00110, 0002x"),
-            "Event": st.column_config.TextColumn("Event name"),
-            "Start": st.column_config.TextColumn("Start (hh:mm)"),
-            "End": st.column_config.TextColumn("End (hh:mm)"),
+            "EventID": st.column_config.TextColumn(
+                "Event ID",
+                help="Unique event identifier (e.g., E1, E2)."
+            ),
+            "Inv": st.column_config.SelectboxColumn(
+                "Inverter",
+                options=INV_CHOICES,
+                help="Inverter concerned by this event."
+            ),
+            "IEC": st.column_config.TextColumn(
+                "IEC code",
+                help="IEC event code (e.g., 00101=OK, 00110=OMC, 0002x=Curtailment)."
+            ),
+            "Event": st.column_config.TextColumn(
+                "Event name",
+                help="Descriptive label for the event (OMC, Curtailment, Test OK, etc.)."
+            ),
+            "Start": st.column_config.TextColumn(
+                "Start (hh:mm)",
+                help="Start time of the event (hh:mm)."
+            ),
+            "End": st.column_config.TextColumn(
+                "End (hh:mm)",
+                help="End time of the event (hh:mm)."
+            ),
         },
     )
     events2_df = _sanitize_two_events(events2_df)
@@ -385,7 +413,27 @@ def page_advanced():
         "Inv_2","IEC_2","Overlap_2_min","wf2 (distribution)","ref_av_2 (computed)",
         "Event Weight (Global)","Availability (Global)"
     ]].copy()
-    st.data_editor(comp_view, key="adv_comp_view", use_container_width=True, disabled=True)
+    st.data_editor(
+        comp_view,
+        key="adv_comp_view",
+        use_container_width=True,
+        disabled=True,
+        column_config={
+            "Time": st.column_config.TextColumn("Time (hh:mm)", help="10-min slot timestamp."),
+            "Inv_1": st.column_config.TextColumn("Inverter 1", help="Inverter associated with Event 1."),
+            "IEC_1": st.column_config.TextColumn("IEC₁", help="IEC code for Event 1."),
+            "Overlap_1_min": st.column_config.NumberColumn("Overlap₁ [min]", help="Duration of overlap between Event 1 and this 10-min slot."),
+            "wf1 (distribution)": st.column_config.NumberColumn("wf₁ (distribution)", help="Weight of Event 1: ov₁ / (ov₁ + ov₂)."),
+            "ref_av_1 (computed)": st.column_config.NumberColumn("ref_av₁", help="Reference availability derived from IEC₁ (0=downtime, 1=available)."),
+            "Inv_2": st.column_config.TextColumn("Inverter 2", help="Inverter associated with Event 2."),
+            "IEC_2": st.column_config.TextColumn("IEC₂", help="IEC code for Event 2."),
+            "Overlap_2_min": st.column_config.NumberColumn("Overlap₂ [min]", help="Duration of overlap between Event 2 and this 10-min slot."),
+            "wf2 (distribution)": st.column_config.NumberColumn("wf₂ (distribution)", help="Weight of Event 2: ov₂ / (ov₁ + ov₂)."),
+            "ref_av_2 (computed)": st.column_config.NumberColumn("ref_av₂", help="Reference availability derived from IEC₂ (0=downtime, 1=available)."),
+            "Event Weight (Global)": st.column_config.NumberColumn("Event Weight (Global)", help="Total event weighting applied to this 10-min slot (≤1)."),
+            "Availability (Global)": st.column_config.NumberColumn("Availability (Global)", help="Global availability: 0 if any overlapping event has ref_av=0."),
+        }
+    )
 
     # ----- Details — Weights & Availability (per slot) -----
     with st.expander("Details — Weights & Availability (per slot)", expanded=False):
@@ -442,7 +490,7 @@ def page_advanced():
             ])
             st.dataframe(det, use_container_width=True)
 
-            st.latex(r"wf_1=\frac{ov_1}{ov_1+ov_2},\quad wf_2=\frac{ov_2}{ov_2+ov_1}")
+            st.latex(r"wf_1=\frac{ov_1}{ov_1+ov_2},\quad wf_2=\frac{ov_2}{ov_1+ov_2}")
             if denom > 0:
                 st.markdown(f"- Numerically: wf1 = **{ov1} / {denom} = {wf1:.3f}**, wf2 = **{ov2} / {denom} = {wf2:.3f}**")
             else:
@@ -456,19 +504,22 @@ def page_advanced():
             elif (rav1 == 1 and rav2 == 1):
                 st.info("Both events considered available (ref_av=1). Availability(Global)=1 and no downtime attribution.")
 
-    # ----- Losses (DC-AC-only) -----
+    # ----- Losses — DC–AC-only -----
     st.markdown("### Losses (computed)")
     losses = _compute_losses(inputs_df, comp)
-
     st.data_editor(
-        losses, key="adv_losses_view", use_container_width=True, disabled=True,
+        losses,
+        key="adv_losses_view",
+        use_container_width=True,
+        disabled=True,
         column_config={
-            "Gap_kWh": st.column_config.NumberColumn("Gap (kWh) = max(0, Potential − AC)"),
-            "Inv_1": st.column_config.TextColumn("Inv (Event 1)"),
-            "Lost_kWh_event1": st.column_config.NumberColumn("Lost (Event 1) [kWh]"),
-            "Inv_2": st.column_config.TextColumn("Inv (Event 2)"),
-            "Lost_kWh_event2": st.column_config.NumberColumn("Lost (Event 2) [kWh]"),
-            "Lost_kWh_slot": st.column_config.NumberColumn("Lost (slot) [kWh]"),
+            "Time": st.column_config.TextColumn("Time (hh:mm)", help="10-min interval timestamp."),
+            "Gap_kWh": st.column_config.NumberColumn("Gap (kWh)", help="max(0, Potential − AC)."),
+            "Inv_1": st.column_config.TextColumn("Inv (Event 1)", help="Inverter linked to Event 1."),
+            "Lost_kWh_event1": st.column_config.NumberColumn("Lost (Event 1) [kWh]", help="(1−ref_av₁)×wf₁×Gap."),
+            "Inv_2": st.column_config.TextColumn("Inv (Event 2)", help="Inverter linked to Event 2."),
+            "Lost_kWh_event2": st.column_config.NumberColumn("Lost (Event 2) [kWh]", help="(1−ref_av₂)×wf₂×Gap."),
+            "Lost_kWh_slot": st.column_config.NumberColumn("Lost (slot) [kWh]", help="Lost(Event1)+Lost(Event2) in the slot."),
         }
     )
 
@@ -481,7 +532,6 @@ def page_advanced():
 
     with st.expander("Details — Losses (numeric application)", expanded=False):
         if not losses.empty and not comp.empty:
-            # Choose slot
             times = losses["Time"].astype(str).tolist()
             idx2 = st.selectbox(
                 "Select interval (losses)",
@@ -492,14 +542,12 @@ def page_advanced():
             r_loss = losses.iloc[idx2]
             t_sel = str(r_loss["Time"])
 
-            # Pull matching weights row (same source of truth as table)
             r_comp = comp.loc[comp["Time"].astype(str) == t_sel]
             if r_comp.empty:
                 st.warning("No weights/availability found for this slot.")
             else:
                 r_comp = r_comp.iloc[0]
 
-                # Read the same values used by the table
                 gap = float(pd.to_numeric(r_loss.get("Gap_kWh"), errors="coerce") or 0.0)
                 wf1 = float(pd.to_numeric(r_comp.get("wf1 (distribution)"), errors="coerce") or 0.0)
                 wf2 = float(pd.to_numeric(r_comp.get("wf2 (distribution)"), errors="coerce") or 0.0)
@@ -516,7 +564,6 @@ def page_advanced():
                 lost1_tbl = float(pd.to_numeric(r_loss.get("Lost_kWh_event1"), errors="coerce") or 0.0)
                 lost2_tbl = float(pd.to_numeric(r_loss.get("Lost_kWh_event2"), errors="coerce") or 0.0)
 
-                # Apply the same relation exactly
                 lost1_calc = (1 - rav1) * wf1 * gap
                 lost2_calc = (1 - rav2) * wf2 * gap
 
@@ -535,55 +582,61 @@ def page_advanced():
                 eps = 1e-6
                 if (abs(lost1_calc - lost1_tbl) > eps) or (abs(lost2_calc - lost2_tbl) > eps):
                     st.error("Mismatch detected: computed vs table. Check IEC→ref_av mapping and weights/inputs for this slot.")
+
     # ===== Global Summary — All Losts & All PBA =====
     st.markdown("### Global Summary — All Losts & All PBA")
+    potential_sum = float(pd.to_numeric(inputs_df["Potential_kWh"], errors="coerce").fillna(0.0).sum()) if not inputs_df.empty else 0.0
+    losts_sum     = float(pd.to_numeric(losses["Lost_kWh_slot"], errors="coerce").fillna(0.0).sum()) if not losses.empty else 0.0
+    all_pba = (potential_sum - losts_sum) / potential_sum if potential_sum > 0 else 0.0
 
-    if losses is not None and not losses.empty and inputs_df is not None and not inputs_df.empty:
-        potential_sum = float(pd.to_numeric(inputs_df["Potential_kWh"], errors="coerce").fillna(0.0).sum())
-        losts_sum     = float(pd.to_numeric(losses["Lost_kWh_slot"], errors="coerce").fillna(0.0).sum())
-        # All PBA = (Potential - All Losts) / Potential
-        all_pba = (potential_sum - losts_sum) / potential_sum if potential_sum > 0 else 0.0
+    summary_df = pd.DataFrame([{
+        "Sum Potential (kWh)": round(potential_sum, 6),
+        "All Losts (kWh)": round(losts_sum, 6),
+        "All PBA (%)": round(all_pba * 100.0, 4),
+    }])
 
-        summary_df = pd.DataFrame([{
-            "Sum Potential (kWh)": round(potential_sum, 6),
-            "All Losts (kWh)": round(losts_sum, 6),
-            "All PBA (%)": round(all_pba * 100.0, 4),
-        }])
+    st.data_editor(
+        summary_df,
+        key="adv_global_summary_all_pba",
+        use_container_width=True,
+        disabled=True,
+        column_config={
+            "Sum Potential (kWh)": st.column_config.NumberColumn(
+                "Sum Potential (kWh)",
+                help="Sum of all potential production over the selected period."
+            ),
+            "All Losts (kWh)": st.column_config.NumberColumn(
+                "All Losts (kWh)",
+                help="Sum of all computed energy losses."
+            ),
+            "All PBA (%)": st.column_config.NumberColumn(
+                "All PBA (%)",
+                help="Global Performance-Based Availability ratio: (Potential−Losts)/Potential ×100."
+            ),
+        }
+    )
 
-        st.data_editor(
-            summary_df,
-            key="adv_global_summary_all_pba",
-            use_container_width=True,
-            disabled=True,
-            column_config={
-                "Sum Potential (kWh)": st.column_config.NumberColumn("Sum Potential (kWh)"),
-                "All Losts (kWh)": st.column_config.NumberColumn("All Losts (kWh)"),
-                "All PBA (%)": st.column_config.NumberColumn("All PBA (%)"),
-            }
-        )
-
-        # --- Details expander (numeric calculation)
-        def _fmt(x, nd=3):
+    # ---- Details — All PBA (global calculation) ----
+    with st.expander("Details — All PBA (global calculation)", expanded=False):
+        # local fmt (independent from previous)
+        def _fmt2(x, nd=3):
             try:
                 return f"{float(x):.{nd}f}"
             except Exception:
                 return "—"
 
-        with st.expander("Details — All PBA (global calculation)", expanded=False):
-            st.markdown("**Definitions**")
-            st.latex(r"\text{All Losts}=\sum \text{Lost\_kWh\_slot}")
-            st.latex(r"\text{Sum Potential}=\sum \text{Potential\_kWh}")
-            st.latex(r"\text{All PBA}=\frac{\text{Sum Potential}-\text{All Losts}}{\text{Sum Potential}}")
+        st.markdown("**Definitions**")
+        st.latex(r"\text{All Losts}=\sum \text{Lost\_kWh\_slot}")
+        st.latex(r"\text{Sum Potential}=\sum \text{Potential\_kWh}")
+        st.latex(r"\text{All PBA}=\frac{\text{Sum Potential}-\text{All Losts}}{\text{Sum Potential}}")
 
-            st.markdown("**Numeric application**")
-            st.markdown(
-                f"- All Losts = **{_fmt(losts_sum)} kWh**  \n"
-                f"- Sum Potential = **{_fmt(potential_sum)} kWh**  \n"
-                f"- All PBA = ({_fmt(potential_sum)} − {_fmt(losts_sum)}) / {_fmt(potential_sum)} "
-                f"= **{_fmt(all_pba)}** → **{_fmt(all_pba*100, 2)} %**"
-            )
-    else:
-        st.info("Fill Inputs and compute Losses to see the global All PBA summary.")
+        st.markdown("**Numeric application**")
+        st.markdown(
+            f"- All Losts = **{_fmt2(losts_sum)} kWh**  \n"
+            f"- Sum Potential = **{_fmt2(potential_sum)} kWh**  \n"
+            f"- All PBA = ({_fmt2(potential_sum)} − {_fmt2(losts_sum)}) / {_fmt2(potential_sum)} "
+            f"= **{_fmt2(all_pba)}** → **{_fmt2(all_pba*100, 2)} %**"
+        )
 
 # Optional: run the page by itself
 if __name__ == "__main__":

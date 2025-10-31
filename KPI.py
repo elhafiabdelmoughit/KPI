@@ -21,10 +21,7 @@ DEFAULTS = {
     "ref_temp": 25.0,    # °C
     "king_a": -3.56,     # King coefficients (used in Intermediate)
     "king_b": -0.075,
-    # NEW for Potential Production
-    "proxy_yield_h": 0.90,       # Proxy Specific Yield (h)
-    "ac_max_project_kw": 1800.0, # AC Max Power (project) [kW]
-    "pr_nominal": 0.80,          # PR nominal for Met-based
+
 }
 
 if "_reset_token" not in st.session_state:
@@ -60,43 +57,12 @@ with st.sidebar:
         key=f"gamma_{st.session_state['_reset_token']}",
     )
 
-    # REMOVED: dc_cap → now handled inside Basic page
-
-    # NEW: Proxy yield & AC Max & PR_nominal (static project-wide)
-    st.markdown("---")
-    proxy_yield_h = st.number_input(
-        "Proxy Specific Yield (h)",
-        min_value=0.0,
-        value=float(DEFAULTS["proxy_yield_h"]),
-        step=0.01,
-        key=f"proxy_yield_{st.session_state['_reset_token']}",
-        help="Reference specific yield used in Proxy-based potential."
-    )
-    ac_max_project_kw = st.number_input(
-        "AC Max Power (project) [kW]",
-        min_value=0.0,
-        value=float(DEFAULTS["ac_max_project_kw"]),
-        step=10.0,
-        key=f"acmax_{st.session_state['_reset_token']}",
-        help="POI AC limit; converted to kWh per 10-min window as AC/6."
-    )
-    pr_nominal = st.number_input(
-        "PR_nominal (0–1)",
-        min_value=0.0,
-        max_value=1.2,
-        value=float(DEFAULTS["pr_nominal"]),
-        step=0.01,
-        key=f"prnom_{st.session_state['_reset_token']}",
-        help="Nominal PR used in Met-based potential."
-    )
 
     # store in session_state so all tabs can read
     st.session_state["ref_irr"] = ref_irr
     st.session_state["ref_temp"] = ref_temp
     st.session_state["gamma"] = gamma
-    st.session_state["proxy_yield_h"] = proxy_yield_h
-    st.session_state["ac_max_project_kw"] = ac_max_project_kw
-    st.session_state["pr_nominal"] = pr_nominal
+    
 
     st.markdown("---")
 
